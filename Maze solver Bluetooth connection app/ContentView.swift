@@ -47,6 +47,7 @@ struct ContentView: View {
                 VStack(spacing: 20) {
                     
                     // Tytuł
+                    
                     Text("Robot Telemetry")
                         .font(.largeTitle)
                         .padding(.top)
