@@ -13,16 +13,15 @@ struct ContentView: View {
 
     var body: some View {
         VStack {
-            // Status połączenia
+
             Text(ble.isConnected ? "Connected 🟢" : "Searching 🔴")
                 .font(.headline)
-            
-            // Sterowanie robotem
+
             Text("Robot Control")
                 .font(.title2)
-            
+
             HStack(spacing: 40) {
-                
+
                 Button("START") {
                     ble.sendCommand("R")
                 }
@@ -31,7 +30,7 @@ struct ContentView: View {
                 .background(.green)
                 .foregroundColor(.white)
                 .cornerRadius(10)
-                
+
                 Button("STOP") {
                     ble.sendCommand("S")
                 }
@@ -41,49 +40,51 @@ struct ContentView: View {
                 .foregroundColor(.white)
                 .cornerRadius(10)
             }
-        
+
             ScrollView {
-                
+
                 VStack(spacing: 20) {
-                    
-                    // Tytuł
-                    
+
                     Text("Robot Telemetry")
                         .font(.largeTitle)
                         .padding(.top)
-                    
-                    
+
                     Divider()
-                    
-                    // Historia telemetry
+
                     Text("Telemetry History")
                         .font(.title2)
-                    
-                    ForEach(ble.telemetryHistory) { t in
-                        
+
+                    Text("Count: \(ble.telemetryHistory.count)")
+                        .foregroundColor(.gray)
+
+                    ForEach(Array(ble.telemetryHistory.enumerated()), id: \.offset) { index, t in
+
                         VStack(alignment: .leading, spacing: 6) {
-                            
+
+                            Text("Time: \(t.timestamp.formatted(date: .omitted, time: .standard))")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+
                             Text("Front: \(t.front) cm")
                             Text("Left: \(t.left) cm")
                             Text("Right: \(t.right) cm")
-                            
+
                             Text("State: \(t.state)")
                                 .fontWeight(.bold)
+
+                            Text("Angle: \(t.angle)")
+                                .foregroundColor(.blue)
                         }
                         .padding()
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(Color.gray.opacity(0.1))
                         .cornerRadius(10)
                     }
-                    
-                    Divider()
-                    
-                    
+
                     Spacer(minLength: 40)
                 }
                 .padding()
             }
-            
         }
     }
 }
