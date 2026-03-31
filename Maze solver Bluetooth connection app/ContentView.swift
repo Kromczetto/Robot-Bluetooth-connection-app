@@ -12,15 +12,17 @@ struct ContentView: View {
     @StateObject var ble = BLEManager()
 
     var body: some View {
+
         VStack {
 
             Text(ble.isConnected ? "Connected 🟢" : "Searching 🔴")
                 .font(.headline)
+                .padding(.top)
 
             Text("Robot Control")
                 .font(.title2)
 
-            HStack(spacing: 40) {
+            HStack(spacing: 20) {
 
                 Button("START") {
                     ble.sendCommand("R")
@@ -40,40 +42,55 @@ struct ContentView: View {
                 .foregroundColor(.white)
                 .cornerRadius(10)
             }
+            .padding()
+
+            // 🔥 LIVE DATA
+            if let latest = ble.telemetryHistory.first {
+
+                VStack(spacing: 6) {
+                    Text("LIVE")
+                        .font(.headline)
+
+                    Text("Front: \(latest.front) cm")
+                    Text("Left: \(latest.left) cm")
+                    Text("Right: \(latest.right) cm")
+                    Text("Angle: \(latest.angle)")
+                        .foregroundColor(.blue)
+
+                    Text("State: \(latest.state)")
+                        .fontWeight(.bold)
+                }
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(Color.blue.opacity(0.1))
+                .cornerRadius(10)
+                .padding(.horizontal)
+            }
+
+            Divider()
 
             ScrollView {
 
-                VStack(spacing: 20) {
+                VStack(spacing: 12) {
 
-                    Text("Robot Telemetry")
-                        .font(.largeTitle)
-                        .padding(.top)
-
-                    Divider()
-
-                    Text("Telemetry History")
+                    Text("History")
                         .font(.title2)
 
                     Text("Count: \(ble.telemetryHistory.count)")
                         .foregroundColor(.gray)
 
-                    ForEach(Array(ble.telemetryHistory.enumerated()), id: \.offset) { index, t in
+                    ForEach(Array(ble.telemetryHistory.enumerated()), id: \.offset) { _, t in
 
-                        VStack(alignment: .leading, spacing: 6) {
+                        VStack(alignment: .leading, spacing: 4) {
 
-                            Text("Time: \(t.timestamp.formatted(date: .omitted, time: .standard))")
+                            Text("\(t.timestamp.formatted(date: .omitted, time: .standard))")
                                 .font(.caption)
                                 .foregroundColor(.gray)
 
-                            Text("Front: \(t.front) cm")
-                            Text("Left: \(t.left) cm")
-                            Text("Right: \(t.right) cm")
-
+                            Text("F: \(t.front)  L: \(t.left)  R: \(t.right)")
+                            Text("Angle: \(t.angle)")
                             Text("State: \(t.state)")
                                 .fontWeight(.bold)
-
-                            Text("Angle: \(t.angle)")
-                                .foregroundColor(.blue)
                         }
                         .padding()
                         .frame(maxWidth: .infinity, alignment: .leading)

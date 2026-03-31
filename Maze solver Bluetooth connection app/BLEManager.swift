@@ -32,33 +32,15 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeriph
     @Published var telemetryHistory: [Telemetry] = []
     @Published var isConnected = false
 
-    private var latestTelemetry: Telemetry?
-    private var timer: Timer?
-
     let serviceUUID = CBUUID(string: "FFE0")
     let characteristicUUID = CBUUID(string: "FFE1")
 
     override init() {
         super.init()
         centralManager = CBCentralManager(delegate: self, queue: nil)
-        startTimer()
     }
 
-    private func startTimer() {
-        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in // TIMER 100MS
-
-            guard let telemetry = self.latestTelemetry else { return }
-
-            DispatchQueue.main.async {
-
-                self.telemetryHistory.insert(telemetry, at: 0)
-
-                if self.telemetryHistory.count > 300 {
-                    self.telemetryHistory.removeLast()
-                }
-            }
-        }
-    }
+    // MARK: - BLE
 
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
 
@@ -90,6 +72,8 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeriph
             self.isConnected = true
         }
 
+        print("Connected to \(peripheral.name ?? "device")")
+
         peripheral.delegate = self
         peripheral.discoverServices([serviceUUID])
     }
@@ -118,9 +102,13 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeriph
 
                 telemetryCharacteristic = char
                 peripheral.setNotifyValue(true, for: char)
+
+                print("Subscribed to telemetry")
             }
         }
     }
+
+    // MARK: - Receiving data
 
     func peripheral(_ peripheral: CBPeripheral,
                     didUpdateValueFor characteristic: CBCharacteristic,
@@ -145,22 +133,30 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeriph
         let clean = string.trimmingCharacters(in: .whitespacesAndNewlines)
         let parts = clean.split(separator: ",")
 
-        if parts.count == 5 {
-
-            let telemetry = Telemetry(
-                front: Int(parts[0]) ?? 0,
-                left:  Int(parts[1]) ?? 0,
-                right: Int(parts[2]) ?? 0,
-                angle: Int(parts[3]) ?? 0,
-                state: String(parts[4])
-            )
-
-            latestTelemetry = telemetry
-
-        } else {
+        guard parts.count == 5 else {
             print("BAD DATA:", clean)
+            return
+        }
+
+        let telemetry = Telemetry(
+            front: Int(parts[0]) ?? 0,
+            left:  Int(parts[1]) ?? 0,
+            right: Int(parts[2]) ?? 0,
+            angle: Int(parts[3]) ?? 0,
+            state: String(parts[4])
+        )
+
+        DispatchQueue.main.async {
+
+            self.telemetryHistory.insert(telemetry, at: 0)
+
+            if self.telemetryHistory.count > 300 {
+                self.telemetryHistory.removeLast()
+            }
         }
     }
+
+    // MARK: - Sending
 
     func sendCommand(_ command: String) {
 
