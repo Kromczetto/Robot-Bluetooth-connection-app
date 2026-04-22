@@ -12,6 +12,7 @@ class MazeModel: ObservableObject {
     struct Cell {
         var visited = false
         var walls: Int = 0
+        var value: Int = 255
     }
 
     @Published var grid: [[Cell]] =
@@ -23,6 +24,7 @@ class MazeModel: ObservableObject {
 
         grid[t.x][t.y].visited = true
         grid[t.x][t.y].walls = t.walls
+        grid[t.x][t.y].value = t.value
     }
 
     func hasWall(x: Int, y: Int, dir: Int) -> Bool {

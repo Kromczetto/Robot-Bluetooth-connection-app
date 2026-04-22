@@ -58,13 +58,18 @@ struct MazeView: View {
                                 }
                             }
                             .stroke(Color.white, lineWidth: 3)
+                            
+                            let value = maze.grid[x][y].value
+                            
+                            Text(value == 255 ? "?" : "\(value)")
+                                .font(.system(size: cell * 0.35, weight: .bold))
+                                .foregroundColor(value == 255 ? .gray: .white)
                         }
                         .frame(width: cell, height: cell)
                         .position(x: posX, y: posY)
                     }
                 }
 
-                // 🤖 robot
                 if let t = telemetry {
 
                     Circle()

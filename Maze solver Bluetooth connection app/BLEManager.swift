@@ -24,6 +24,8 @@ struct Telemetry {
     let y: Int
     let dir: Int
     let walls: Int
+    
+    let value: Int
 
 }
 
@@ -139,7 +141,7 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeriph
         let clean = string.trimmingCharacters(in: .whitespacesAndNewlines)
         let parts = clean.split(separator: ",")
 
-        guard parts.count == 9 else { return }
+        guard parts.count == 10 else { return }
 
         let telemetry = Telemetry(
             front: Int(parts[0]) ?? 0,
@@ -150,7 +152,9 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeriph
             x: Int(parts[5]) ?? 0,
             y: Int(parts[6]) ?? 0,
             dir: Int(parts[7]) ?? 0,
-            walls: Int(parts[8]) ?? 0
+            walls: Int(parts[8]) ?? 0,
+            value: Int(parts[9]) ?? 255
+            
         )
 
         DispatchQueue.main.async {
