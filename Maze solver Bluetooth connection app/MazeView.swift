@@ -11,21 +11,19 @@ struct MazeView: View {
     @ObservedObject var maze: MazeModel
     var telemetry: Telemetry?
 
-    let size = 16
-
     var body: some View {
 
         GeometryReader { geo in
 
-            let cell = geo.size.width / CGFloat(size)
+            let cell = geo.size.width / CGFloat(maze.width)
 
             ZStack {
 
-                ForEach(0..<size, id: \.self) { x in
-                    ForEach(0..<size, id: \.self) { y in
+                ForEach(0..<maze.width, id: \.self) { x in
+                    ForEach(0..<maze.height, id: \.self) { y in
 
-                        let posX = CGFloat(x)*cell + cell/2
-                        let posY = CGFloat(size-1-y)*cell + cell/2
+                        let posX = CGFloat(x) * cell + cell / 2
+                        let posY = CGFloat(maze.height - 1 - y) * cell + cell / 2
 
                         ZStack {
 
@@ -57,13 +55,13 @@ struct MazeView: View {
                                     path.addLine(to: CGPoint(x: 0, y: h))
                                 }
                             }
-                            .stroke(Color.white, lineWidth: 3)
-                            
+                            .stroke(Color.white, lineWidth: 2)
+
                             let value = maze.grid[x][y].value
-                            
+
                             Text(value == 255 ? "?" : "\(value)")
                                 .font(.system(size: cell * 0.35, weight: .bold))
-                                .foregroundColor(value == 255 ? .gray: .white)
+                                .foregroundColor(value == 255 ? .gray : .white)
                         }
                         .frame(width: cell, height: cell)
                         .position(x: posX, y: posY)
@@ -74,10 +72,10 @@ struct MazeView: View {
 
                     Circle()
                         .fill(Color.red)
-                        .frame(width: cell*0.6, height: cell*0.6)
+                        .frame(width: cell * 0.6, height: cell * 0.6)
                         .position(
-                            x: CGFloat(t.x)*cell + cell/2,
-                            y: CGFloat(size-1-t.y)*cell + cell/2
+                            x: CGFloat(t.x) * cell + cell / 2,
+                            y: CGFloat(maze.height - 1 - t.y) * cell + cell / 2
                         )
                 }
             }
