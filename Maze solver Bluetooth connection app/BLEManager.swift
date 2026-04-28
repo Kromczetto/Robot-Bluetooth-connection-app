@@ -1,10 +1,3 @@
-//
-//  BLEManager.swift
-//  Maze solver Bluetooth connection app
-//
-//  Created by Kuba Kromołowski on 15/03/2026.
-//
-
 import Foundation
 import CoreBluetooth
 import SwiftUI
@@ -18,8 +11,6 @@ struct Telemetry {
     let left: Int
     let right: Int
 
-    let mazeSize: Int
-
     let state: String
 
     let x: Int
@@ -28,6 +19,11 @@ struct Telemetry {
     let walls: Int
 
     let value: Int
+
+    let time: Int
+    let cells: Int
+    let turns: Int
+    let algorithm: Int
 }
 
 class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeripheralDelegate {
@@ -55,9 +51,7 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeriph
     }
 
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
-
         if central.state == .poweredOn {
-            print("BLE ready → scanning")
             centralManager.scanForPeripherals(withServices: nil)
         }
     }
@@ -70,7 +64,6 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeriph
         guard let name = peripheral.name else { return }
 
         if name.contains("BT05") || name.contains("HMSoft") {
-
             self.peripheral = peripheral
             centralManager.stopScan()
             centralManager.connect(peripheral)
@@ -83,8 +76,6 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeriph
         DispatchQueue.main.async {
             self.isConnected = true
         }
-
-        print("Connected to \(peripheral.name ?? "device")")
 
         peripheral.delegate = self
         peripheral.discoverServices([serviceUUID])
@@ -109,13 +100,9 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeriph
         guard let characteristics = service.characteristics else { return }
 
         for char in characteristics {
-
             if char.uuid == characteristicUUID {
-
                 telemetryCharacteristic = char
                 peripheral.setNotifyValue(true, for: char)
-
-                print("Subscribed to telemetry")
             }
         }
     }
@@ -141,7 +128,6 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeriph
     func parseLine(_ line: String) {
 
         let clean = line.trimmingCharacters(in: .whitespacesAndNewlines)
-
         if clean.isEmpty { return }
 
         if clean == "MAZE_START" {
@@ -183,8 +169,8 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeriph
 
         let parts = string.split(separator: ",")
 
-        guard parts.count == 10 else {
-            print("❌ Bad telemetry:", string)
+        guard parts.count == 13 else {
+            print("Bad telemetry:", string)
             return
         }
 
@@ -192,19 +178,19 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeriph
             front: Int(parts[0]) ?? 0,
             left:  Int(parts[1]) ?? 0,
             right: Int(parts[2]) ?? 0,
-
-            mazeSize: Int(parts[3]) ?? 16,
-
-            state: String(parts[4]),
-            x: Int(parts[5]) ?? 0,
-            y: Int(parts[6]) ?? 0,
-            dir: Int(parts[7]) ?? 0,
-            walls: Int(parts[8]) ?? 0,
-            value: Int(parts[9]) ?? 255
+            state: String(parts[3]),
+            x: Int(parts[4]) ?? 0,
+            y: Int(parts[5]) ?? 0,
+            dir: Int(parts[6]) ?? 0,
+            walls: Int(parts[7]) ?? 0,
+            value: Int(parts[8]) ?? 255,
+            time: Int(parts[9]) ?? 0,
+            cells: Int(parts[10]) ?? 0,
+            turns: Int(parts[11]) ?? 0,
+            algorithm: Int(parts[12]) ?? 0
         )
 
         DispatchQueue.main.async {
-
             self.telemetryHistory.insert(telemetry, at: 0)
 
             if self.telemetryHistory.count > 300 {
@@ -219,11 +205,6 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeriph
               let characteristic = telemetryCharacteristic else { return }
 
         let data = command.data(using: .utf8)!
-
-        peripheral.writeValue(
-            data,
-            for: characteristic,
-            type: .withoutResponse
-        )
+        peripheral.writeValue(data, for: characteristic, type: .withoutResponse)
     }
 }

@@ -1,5 +1,4 @@
 import SwiftUI
-import Combine
 
 struct ContentView: View {
 
@@ -10,27 +9,25 @@ struct ContentView: View {
 
         TabView {
 
-            logView
+            dashboard
                 .tabItem {
-                    Label("Log", systemImage: "list.bullet")
+                    Label("Control", systemImage: "slider.horizontal.3")
                 }
 
-            mazeTab
-                .tabItem {
-                    Label("Maze", systemImage: "square.grid.3x3")
-                }
+            MazeView(
+                maze: maze,
+                telemetry: ble.telemetryHistory.first
+            )
+            .tabItem {
+                Label("Maze", systemImage: "square.grid.3x3")
+            }
         }
         .onReceive(ble.$telemetryHistory) { history in
             if let latest = history.first {
-
-                if latest.mazeSize > 0 && latest.mazeSize != maze.width {
-                    maze.resize(width: latest.mazeSize, height: latest.mazeSize)
-                }
-
                 maze.update(latest)
             }
         }
-        .onReceive(ble.$mazeDebug.receive(on: RunLoop.main)) { grid in
+        .onReceive(ble.$mazeDebug) { grid in
             maze.updateFromMazeDebug(grid)
         }
     }
@@ -38,150 +35,166 @@ struct ContentView: View {
 
 extension ContentView {
 
-    var mazeTab: some View {
-
-        Group {
-            if maze.width == 0 || maze.height == 0 {
-
-                Text("Waiting for maze...")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            } else {
-
-                MazeView(
-                    maze: maze,
-                    telemetry: ble.telemetryHistory.first
-                )
-            }
-        }
-    }
-}
-
-extension ContentView {
-
-    var logView: some View {
-        VStack {
-
-            headerView
-            controlButtons
-            recalcView
-            liveView
-
-            Divider()
-
-            historyView
-        }
-    }
-
-    var headerView: some View {
-        VStack {
-            Text(ble.isConnected ? "Connected 🟢" : "Searching 🔴")
-                .font(.headline)
-                .padding(.top)
-
-            Text("Robot Control")
-                .font(.title2)
-        }
-    }
-
-    var controlButtons: some View {
-        HStack(spacing: 20) {
-
-            Button("START") {
-                ble.sendCommand("R")
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(.green)
-
-            Button("STOP") {
-                ble.sendCommand("S")
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(.red)
-        }
-        .padding()
-    }
-
-    var recalcView: some View {
-        Text("Last: \(ble.lastRecalc)")
-            .foregroundColor(.orange)
-            .padding(.bottom, 5)
-    }
-}
-
-extension ContentView {
-
-    var liveView: some View {
-
-        Group {
-            if let latest = ble.telemetryHistory.first {
-
-                VStack(spacing: 6) {
-                    Text("LIVE")
-                        .font(.headline)
-
-                    Text("Front: \(latest.front) cm")
-                    Text("Left: \(latest.left) cm")
-                    Text("Right: \(latest.right) cm")
-
-                    Text("Maze: \(latest.mazeSize)x\(latest.mazeSize)")
-                        .foregroundColor(.blue)
-
-                    Text("State: \(latest.state)")
-                        .fontWeight(.bold)
-
-                    Text("Pos: (\(latest.x), \(latest.y)) dir: \(latest.dir)")
-                        .foregroundColor(.purple)
-                }
-                .padding()
-                .frame(maxWidth: .infinity)
-                .background(Color.blue.opacity(0.1))
-                .cornerRadius(10)
-                .padding(.horizontal)
-            }
-        }
-    }
-}
-
-extension ContentView {
-
-    var historyView: some View {
+    var dashboard: some View {
 
         ScrollView {
 
-            VStack(spacing: 12) {
+            VStack(spacing: 20) {
 
-                Text("History")
-                    .font(.title2)
+                connectionCard
+                controlCard
+                algorithmCard
+                telemetryCard
 
-                Text("Count: \(ble.telemetryHistory.count)")
-                    .foregroundColor(.gray)
-
-                ForEach(Array(ble.telemetryHistory.enumerated()), id: \.offset) { _, t in
-
-                    VStack(alignment: .leading, spacing: 4) {
-
-                        Text("\(t.timestamp.formatted(date: .omitted, time: .standard))")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-
-                        Text("F: \(t.front)  L: \(t.left)  R: \(t.right)")
-                        Text("Maze: \(t.mazeSize)x\(t.mazeSize)")
-                        Text("State: \(t.state)")
-                            .fontWeight(.bold)
-
-                        Text("(\(t.x), \(t.y)) dir: \(t.dir)")
-                            .foregroundColor(.purple)
-                    }
-                    .padding()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.gray.opacity(0.1))
-                    .cornerRadius(10)
-                }
-
-                Spacer(minLength: 40)
             }
             .padding()
         }
+    }
+}
+
+extension ContentView {
+
+    var connectionCard: some View {
+        HStack {
+            Circle()
+                .fill(ble.isConnected ? Color.green : Color.red)
+                .frame(width: 12, height: 12)
+
+            Text(ble.isConnected ? "Connected" : "Searching...")
+                .font(.headline)
+
+            Spacer()
+        }
+        .padding()
+        .background(.ultraThinMaterial)
+        .cornerRadius(16)
+    }
+
+    var controlCard: some View {
+        VStack(spacing: 12) {
+
+            Text("Robot Control")
+                .font(.headline)
+
+            HStack(spacing: 16) {
+
+                Button {
+                    ble.sendCommand("R")
+                } label: {
+                    Label("START", systemImage: "play.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.green)
+
+                Button {
+                    ble.sendCommand("S")
+                } label: {
+                    Label("STOP", systemImage: "stop.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.red)
+            }
+        }
+        .padding()
+        .background(.ultraThinMaterial)
+        .cornerRadius(16)
+    }
+
+    var algorithmCard: some View {
+        VStack(spacing: 12) {
+
+            Text("Algorithm")
+                .font(.headline)
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 10) {
+
+                algoButton("LEFT", 0)
+                algoButton("FLOOD", 1)
+                algoButton("TREMAUX", 2)
+                algoButton("GREEDY", 3)
+            }
+        }
+        .padding()
+        .background(.ultraThinMaterial)
+        .cornerRadius(16)
+    }
+
+    func algoButton(_ name: String, _ id: Int) -> some View {
+        Button {
+            ble.sendCommand("ALG:\(id)\n")
+        } label: {
+            Text(name)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+    }
+
+    var telemetryCard: some View {
+
+        Group {
+            if let t = ble.telemetryHistory.first {
+
+                VStack(spacing: 12) {
+
+                    Text("Telemetry")
+                        .font(.headline)
+
+                    HStack {
+                        stat("Front", "\(t.front) cm")
+                        stat("Left", "\(t.left)")
+                        stat("Right", "\(t.right)")
+                    }
+
+                    Divider()
+
+                    HStack {
+                        stat("Pos", "\(t.x), \(t.y)")
+                        stat("Dir", "\(t.dir)")
+                        stat("State", t.state)
+                    }
+
+                    Divider()
+
+                    HStack {
+                        stat("Time", "\(t.time) ms")
+                        stat("Cells", "\(t.cells)")
+                        stat("Turns", "\(t.turns)")
+                    }
+
+                    Divider()
+
+                    Text("Algorithm: \(algoName(t.algorithm))")
+                        .fontWeight(.bold)
+                        .foregroundColor(.orange)
+                }
+                .padding()
+                .background(.ultraThinMaterial)
+                .cornerRadius(16)
+            }
+        }
+    }
+
+    func stat(_ title: String, _ value: String) -> some View {
+        VStack {
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.gray)
+
+            Text(value)
+                .font(.headline)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+func algoName(_ a: Int) -> String {
+    switch a {
+    case 0: return "LEFT"
+    case 1: return "FLOOD"
+    case 2: return "TREMAUX"
+    case 3: return "GREEDY"
+    default: return "?"
     }
 }
