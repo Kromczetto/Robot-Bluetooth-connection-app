@@ -4,6 +4,7 @@
 //
 //  Created by Kuba Kromołowski on 11/04/2026.
 //
+
 import SwiftUI
 
 struct MazeView: View {
@@ -67,6 +68,14 @@ struct MazeView: View {
                         .position(x: posX, y: posY)
                     }
                 }
+
+                Circle()
+                    .stroke(Color.yellow, lineWidth: 3)
+                    .frame(width: cell * 0.7, height: cell * 0.7)
+                    .position(
+                        x: CGFloat(maze.goalX) * cell + cell / 2,
+                        y: CGFloat(maze.height - 1 - maze.goalY) * cell + cell / 2
+                    )
 
                 if let t = telemetry {
 

@@ -1,9 +1,20 @@
+//
+//  Maze_solver_Bluetooth_connection_appApp.swift
+//  Maze solver Bluetooth connection app
+//
+//  Created by Kuba Kromołowski on 15/03/2026.
+//
+
+import SwiftUI
+
 import SwiftUI
 
 struct ContentView: View {
 
     @StateObject var ble = BLEManager()
     @StateObject var maze = MazeModel()
+
+    @State private var finalTime: Int? = nil
 
     var body: some View {
 
@@ -21,14 +32,43 @@ struct ContentView: View {
             .tabItem {
                 Label("Maze", systemImage: "square.grid.3x3")
             }
+
+            configView
+                .tabItem {
+                    Label("Config", systemImage: "gearshape")
+                }
         }
+
         .onReceive(ble.$telemetryHistory) { history in
             if let latest = history.first {
+
                 maze.update(latest)
+
+                if latest.x == maze.goalX && latest.y == maze.goalY {
+
+                    if finalTime == nil {
+                        finalTime = latest.time
+
+                        ble.sendCommand("S")
+                    }
+                }
             }
         }
+
         .onReceive(ble.$mazeDebug) { grid in
             maze.updateFromMazeDebug(grid)
+        }
+
+        .onReceive(ble.$didRestart) { restart in
+            if restart {
+
+                ble.telemetryHistory.removeAll()
+                maze.resize(width: maze.width, height: maze.height)
+
+                finalTime = nil
+
+                ble.didRestart = false
+            }
         }
     }
 }
@@ -45,7 +85,6 @@ extension ContentView {
                 controlCard
                 algorithmCard
                 telemetryCard
-
             }
             .padding()
         }
@@ -123,7 +162,7 @@ extension ContentView {
 
     func algoButton(_ name: String, _ id: Int) -> some View {
         Button {
-            ble.sendCommand("ALG:\(id)\n")
+            ble.sendCommand("ALG:\(id)")
         } label: {
             Text(name)
                 .frame(maxWidth: .infinity)
@@ -172,6 +211,11 @@ extension ContentView {
                 .padding()
                 .background(.ultraThinMaterial)
                 .cornerRadius(16)
+            } else {
+
+                Text("Waiting for telemetry...")
+                    .foregroundColor(.gray)
+                    .padding()
             }
         }
     }
@@ -186,6 +230,23 @@ extension ContentView {
                 .font(.headline)
         }
         .frame(maxWidth: .infinity)
+    }
+}
+
+extension ContentView {
+
+    var configView: some View {
+
+        VStack(spacing: 20) {
+
+            Text("Goal is fixed at (2,2)")
+                .font(.headline)
+
+            Button("Send Goal to Robot") {
+                ble.sendCommand("GOAL:2,2")
+            }
+        }
+        .padding()
     }
 }
 

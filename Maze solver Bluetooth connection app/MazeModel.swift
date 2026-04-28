@@ -20,6 +20,9 @@ class MazeModel: ObservableObject {
 
     @Published var grid: [[Cell]] = []
 
+    @Published var goalX: Int = 2
+    @Published var goalY: Int = 2
+
     init() {
         resize(width: 16, height: 16)
     }

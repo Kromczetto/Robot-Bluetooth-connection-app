@@ -1,3 +1,10 @@
+//
+//  Maze_solver_Bluetooth_connection_appApp.swift
+//  Maze solver Bluetooth connection app
+//
+//  Created by Kuba Kromołowski on 15/03/2026.
+//
+
 import Foundation
 import CoreBluetooth
 import SwiftUI
@@ -41,6 +48,7 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeriph
     @Published var mazeDebug: [[Int]] = []
     @Published var lastRecalc: String = ""
     @Published var isConnected = false
+    @Published var didRestart = false
 
     let serviceUUID = CBUUID(string: "FFE0")
     let characteristicUUID = CBUUID(string: "FFE1")
@@ -64,6 +72,7 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeriph
         guard let name = peripheral.name else { return }
 
         if name.contains("BT05") || name.contains("HMSoft") {
+
             self.peripheral = peripheral
             centralManager.stopScan()
             centralManager.connect(peripheral)
@@ -101,6 +110,7 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeriph
 
         for char in characteristics {
             if char.uuid == characteristicUUID {
+
                 telemetryCharacteristic = char
                 peripheral.setNotifyValue(true, for: char)
             }
@@ -169,21 +179,22 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeriph
 
         let parts = string.split(separator: ",")
 
-        guard parts.count == 13 else {
-            print("Bad telemetry:", string)
-            return
-        }
+        guard parts.count == 13 else { return }
 
         let telemetry = Telemetry(
             front: Int(parts[0]) ?? 0,
             left:  Int(parts[1]) ?? 0,
             right: Int(parts[2]) ?? 0,
+
             state: String(parts[3]),
+
             x: Int(parts[4]) ?? 0,
             y: Int(parts[5]) ?? 0,
             dir: Int(parts[6]) ?? 0,
             walls: Int(parts[7]) ?? 0,
+
             value: Int(parts[8]) ?? 255,
+
             time: Int(parts[9]) ?? 0,
             cells: Int(parts[10]) ?? 0,
             turns: Int(parts[11]) ?? 0,
@@ -191,6 +202,7 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeriph
         )
 
         DispatchQueue.main.async {
+
             self.telemetryHistory.insert(telemetry, at: 0)
 
             if self.telemetryHistory.count > 300 {
@@ -205,6 +217,17 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeriph
               let characteristic = telemetryCharacteristic else { return }
 
         let data = command.data(using: .utf8)!
-        peripheral.writeValue(data, for: characteristic, type: .withoutResponse)
+
+        peripheral.writeValue(
+            data,
+            for: characteristic,
+            type: .withoutResponse
+        )
+
+        if command == "R" {
+            DispatchQueue.main.async {
+                self.didRestart = true
+            }
+        }
     }
 }
