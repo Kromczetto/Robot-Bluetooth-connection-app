@@ -83,4 +83,20 @@ class MazeModel: ObservableObject {
             }
         }
     }
+    
+    func exportMazeData() -> (values: [Int], walls: [Int]) {
+
+        var values: [Int] = []
+        var walls: [Int] = []
+
+        for y in 0..<height {
+            for x in 0..<width {
+
+                values.append(grid[x][y].value)
+                walls.append(grid[x][y].walls)
+            }
+        }
+
+        return (values, walls)
+    }
 }

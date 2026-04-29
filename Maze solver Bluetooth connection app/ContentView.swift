@@ -7,9 +7,13 @@
 
 import SwiftUI
 
-import SwiftUI
-
 struct ContentView: View {
+    
+    @State private var showFinishAlert = false
+    @State private var pendingTelemetry: Telemetry? = nil
+
+    @State private var goalXInput = "2"
+    @State private var goalYInput = "2"
 
     @StateObject var ble = BLEManager()
     @StateObject var maze = MazeModel()
@@ -50,6 +54,9 @@ struct ContentView: View {
                         finalTime = latest.time
 
                         ble.sendCommand("S")
+
+                        pendingTelemetry = latest
+                        showFinishAlert = true
                     }
                 }
             }
@@ -70,6 +77,47 @@ struct ContentView: View {
                 ble.didRestart = false
             }
         }
+        .alert("Run finished", isPresented: $showFinishAlert) {
+            
+            Button("Cancel", role: .cancel) {}
+            
+            Button("Send") {
+                if let telemetry = pendingTelemetry {
+                    sendRunToServer(maze: maze, telemetry: telemetry)
+                }
+            }
+            
+        } message: {
+            Text("Send run to server?")
+        }
+    }
+    
+    func sendRunToServer(maze: MazeModel, telemetry: Telemetry) {
+
+        let data = maze.exportMazeData()
+
+        guard let url = URL(string: "https://maze-telemetry.up.railway.app/run") else { return }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: Any] = [
+            "time": telemetry.time,
+            "cells": telemetry.cells,
+            "turns": telemetry.turns,
+            "algorithm": algoName(telemetry.algorithm),
+
+            "width": maze.width,
+            "height": maze.height,
+
+            "maze": data.values,
+            "walls": data.walls
+        ]
+
+        request.httpBody = try! JSONSerialization.data(withJSONObject: body)
+
+        URLSession.shared.dataTask(with: request).resume()
     }
 }
 
@@ -239,12 +287,32 @@ extension ContentView {
 
         VStack(spacing: 20) {
 
-            Text("Goal is fixed at (2,2)")
+            Text("Set Goal")
                 .font(.headline)
 
-            Button("Send Goal to Robot") {
-                ble.sendCommand("GOAL:2,2")
+            HStack {
+                TextField("X", text: $goalXInput)
+                    .textFieldStyle(.roundedBorder)
+                    .keyboardType(.numberPad)
+
+                TextField("Y", text: $goalYInput)
+                    .textFieldStyle(.roundedBorder)
+                    .keyboardType(.numberPad)
             }
+
+            Button("Set Goal") {
+
+                guard let x = Int(goalXInput),
+                      let y = Int(goalYInput) else { return }
+
+                maze.goalX = x
+                maze.goalY = y
+
+                ble.sendCommand("GOAL:\(x),\(y)")
+            }
+            .buttonStyle(.borderedProminent)
+
+            Spacer()
         }
         .padding()
     }
